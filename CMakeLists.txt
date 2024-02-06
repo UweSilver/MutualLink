@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.28)
+project(mutual_link)
+set(CMAKE_CXX_STANDARD 20)
+
+file(GLOB main "main/*.cpp")
+file(GLOB script "sub/*.cpp")
+
+option(DYNAMIC_LINK "dynamic link" OFF)
+if (DYNAMIC_LINK)
+    add_compile_definitions("DYNAMIC_LINK")
+    add_executable(main ${main})
+    add_library(script SHARED ${script})
+    message(STATUS "dynamic link")
+else()
+    add_executable(main ${main} ${script})
+    message(STATUS "static link")
+endif()
