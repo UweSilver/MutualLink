@@ -28,6 +28,19 @@ def main():
 
     functions = []
     for child in translation_unit.cursor.get_children():
+
+        if child.kind == CursorKind.CLASS_DECL:
+            filepath = child.location.file.name
+            filename = os.path.basename(filepath)
+
+            if filename != input_filename:
+                continue
+
+            class_name = child.spelling
+            print(class_name)
+            print(child.get_fields().spelling)
+            continue
+
         if child.kind != CursorKind.FUNCTION_DECL:
             continue
 
