@@ -26,16 +26,41 @@ def get_class_tree(input_filenames):
                     "line_number": cursor.location.line,
                     "namespace": namespace.copy(),
                     "base_classes": [base.spelling for base in cursor.get_children() if base.kind == CursorKind.CXX_BASE_SPECIFIER],
-                    "methods": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CXX_METHOD],
-                    "public_methods": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CXX_METHOD and method.access_specifier == clang.cindex.AccessSpecifier.PUBLIC],
-                    "protected_methods": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CXX_METHOD and method.access_specifier == clang.cindex.AccessSpecifier.PROTECTED],
-                    "private_methods": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CXX_METHOD and method.access_specifier == clang.cindex.AccessSpecifier.PRIVATE],
+                    "methods": {},
+                    "constructors": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CONSTRUCTOR],
+                    "destructor": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.DESTRUCTOR],
                 }
-
+                for method in cursor.get_children():
+                    if not method.kind == CursorKind.CXX_METHOD:
+                        continue
+                    classes[cursor.spelling]["methods"][method.spelling] = {
+                        "return_type": method.result_type.spelling,
+                        "parameters": {},
+                        "access_specifier": method.access_specifier.name,
+                    }
+                    for param in method.get_children():
+                        print(param.spelling, param.kind)
+                    classes[cursor.spelling]["methods"][method.spelling] = [param.spelling for param in method.get_children() if param.kind == CursorKind.PARM_DECL]
 
         for cursor in translation_unit.cursor.get_children():
             search_namespace(cursor)
     return classes
+
+def get_exporter_code(classes):
+    code = ""
+    
+    extern = \
+        ("#if defined(DYNAMIC_LINK)\n"
+        "extern \"C\" __declspec(dllexport)\n"
+        "#endif\n")
+    
+    for class_name, class_info in classes.items():
+        pass
+    return code
+
+def get_importer_code(classes):
+    
+    pass
 
 def main():
     # Set the path to the LLVM shared library

@@ -41,6 +41,10 @@ namespace TestFlamework
         }
     };
 
+    
+
+using tempint = TestFlamework::TempClass<int> ;
+
     class HogeComponent : public ExportClass
     {
     public:
@@ -58,7 +62,7 @@ namespace TestFlamework
         }
 
         private:
-        void privateMethod()
+        void privateMethod(tempint a)
         {
             std::cout << "HogeComponent::privateMethod" << std::endl;
         }
@@ -77,8 +81,6 @@ namespace TestFlamework
         }
     };
 }
-
-using tempint = TestFlamework::TempClass<int> ;
 
 std::shared_ptr<TestFlamework::HogeComponent> ptr;
 int main()
