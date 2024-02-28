@@ -18,6 +18,37 @@ def main():
 
     translation_unit = index.parse(args.filename, args=['-x', 'c++'])
 
+    namespace = []
+    classes = {}
+    def search_namespace(cursor):
+        if cursor.kind == CursorKind.NAMESPACE:
+            namespace.append(cursor.spelling)
+            for child in cursor.get_children():
+                search_namespace(child)
+            namespace.pop()
+
+        if cursor.kind == CursorKind.CLASS_DECL:
+            classes[cursor.spelling] = {
+                "filename": cursor.location.file.name,
+                "line_number": cursor.location.line,
+                "namespace": namespace.copy(),
+                "base_classes": [base.spelling for base in cursor.get_children() if base.kind == CursorKind.CXX_BASE_SPECIFIER],
+                "public_methods": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CXX_METHOD and method.access_specifier == CursorKind.CXX_PUBLIC],
+                "protected_methods": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CXX_METHOD and method.access_specifier == CursorKind.CXX_PROTECTED],
+                "private_methods": [method.spelling for method in cursor.get_children() if method.kind == CursorKind.CXX_METHOD and method.access_specifier == CursorKind.CXX_PRIVATE],
+            }
+
+
+    for cursor in translation_unit.cursor.get_children():
+        search_namespace(cursor)
+
+    export_classes = {}
+    for class_name, class_info in classes.items():
+        if "ExportClass" in class_info["base_classes"]:
+            export_classes[class_name] = class_info
+
+    print(json.dumps(export_classes, indent=4, ensure_ascii=False))
+
     comments = {}
     for token in translation_unit.cursor.get_tokens():
         if token.kind == TokenKind.COMMENT:
@@ -26,59 +57,25 @@ def main():
 
             comments[line_number] = comment
 
-    functions = []
-    for child in translation_unit.cursor.get_children():
+    # classes = {}
+    # for child in translation_unit.cursor.get_children():
+    #     if child.kind != CursorKind.CLASS_DECL:
+    #         continue
 
-        if child.kind == CursorKind.CLASS_DECL:
-            filepath = child.location.file.name
-            filename = os.path.basename(filepath)
+    #     base_classes = []
+    #     for base in child.get_children():
+    #         if base.kind != CursorKind.CXX_BASE_SPECIFIER:
+    #             continue
 
-            if filename != input_filename:
-                continue
+    #         base_classes.append(base.get_definition().spelling)
 
-            class_name = child.spelling
-            print(class_name)
-            print(child.get_fields().spelling)
-            continue
+    #     classes[child.spelling] = {
+    #         "filename": child.location.file.name,
+    #         "line_number": child.location.line,
+    #         "base_classes": base_classes,
+    #         }
 
-        if child.kind != CursorKind.FUNCTION_DECL:
-            continue
-
-        if child.location.file is None:
-            continue
-
-        filepath = child.location.file.name
-        filename = os.path.basename(filepath)
-
-        if filename != input_filename:
-            continue
-
-        function_name = child.spelling
-        return_type = child.result_type.spelling
-
-        line_number = child.location.line
-        comment = comments.get(line_number, "")
-
-        params = []
-        for param in child.get_arguments():
-            param_name = param.spelling
-            param_type = param.type.spelling
-
-            params.append({
-                "name": param_name,
-                "type": param_type
-            })
-
-        functions.append({
-            "name": function_name,
-            "return_type": return_type,
-            "params": params,
-            "filename": filename,
-            "line_number": line_number,
-            "comment": comment
-        })
-
-    print(json.dumps(functions, indent=4, ensure_ascii=False))
+    # print(json.dumps(classes, indent=4, ensure_ascii=False))
 
 if __name__ == "__main__":
     main()
