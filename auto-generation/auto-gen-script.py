@@ -7,6 +7,7 @@ import clang
 
 def get_class_tree(input_filenames):
     classes = {}
+    typealiases = {}
     for input_file in input_filenames:
         index = Index.create()
         translation_unit = index.parse(input_file, args=['-x', 'c++'])
@@ -38,13 +39,21 @@ def get_class_tree(input_filenames):
                         "parameters": {},
                         "access_specifier": method.access_specifier.name,
                     }
-                    for param in method.get_children():
-                        print(param.spelling, param.kind)
-                    classes[cursor.spelling]["methods"][method.spelling] = [param.spelling for param in method.get_children() if param.kind == CursorKind.PARM_DECL]
+                    
+                    for c in method.get_children():
+                        if c.kind == CursorKind.PARM_DECL:
+                            classes[cursor.spelling]["methods"][method.spelling]["parameters"][c.spelling] = c.type.spelling
 
+            if cursor.kind == CursorKind.TYPE_ALIAS_DECL:
+                typealiases[cursor.spelling] = {
+                    "filename": cursor.location.file.name,
+                    "line_number": cursor.location.line,
+                    "namespace": namespace.copy(),
+                    "type": cursor.underlying_typedef_type.spelling,
+                }
         for cursor in translation_unit.cursor.get_children():
             search_namespace(cursor)
-    return classes
+    return classes, typealiases
 
 def get_exporter_code(classes):
     code = ""
@@ -54,7 +63,41 @@ def get_exporter_code(classes):
         "extern \"C\" __declspec(dllexport)\n"
         "#endif\n")
     
+    
+    
     for class_name, class_info in classes.items():
+        full_namespace = "_".join(class_info["namespace"])
+        # print(full_namespace)
+
+        # constructor
+        code += extern
+        code += f"void* {full_namespace}_{class_name}_CONSTRUCTOR(\n"
+        code += f"{full_namespace}_{class_name}** self\n"
+        code += "){\n"
+        # allocate memory
+        # add reference count
+        code += "}\n\n"
+
+        # destructor
+        code += extern
+        code += f"void {full_namespace}_{class_name}_DESTRUCTOR(\n"
+        code += f"{full_namespace}_{class_name}** self\n"
+        code += "){\n"
+        # release memory
+        # subtract reference count
+        code += "}\n\n"
+
+        # methods
+        for method_name, method_info in class_info["methods"].items():
+            code += extern
+            code += f"{method_info['return_type']} {full_namespace}_{class_name}_{method_name}(\n"
+            self_param = {"self": f"{full_namespace}_{class_name}**"}
+            params = self_param | method_info["parameters"]
+            param_code = " ,".join([f"{param_type} {param_name}" for param_name, param_type in params.items()])
+            code += f"{param_code}\n"
+            code += "){\n"
+            # call the method
+            code += "}\n\n"
         pass
     return code
 
@@ -72,10 +115,11 @@ def main():
 
     input_filename = os.path.basename(args.filename)
 
-    classes = get_class_tree([input_filename])
+    classes, typealiases = get_class_tree([input_filename])
     
-    print(json.dumps(classes, indent=4, ensure_ascii=False))
-
+    # print(json.dumps(classes, indent=4, ensure_ascii=False))
+    # print(json.dumps(typealiases, indent=4, ensure_ascii=False))
+    print(get_exporter_code(classes))
 
 if __name__ == "__main__":
     main()

@@ -43,7 +43,7 @@ namespace TestFlamework
 
     
 
-using tempint = TestFlamework::TempClass<int> ;
+    using tempint = TestFlamework::TempClass<int> ;
 
     class HogeComponent : public ExportClass
     {
@@ -68,6 +68,8 @@ using tempint = TestFlamework::TempClass<int> ;
         }
     };
 
+    namespace Math{
+
     class FugaComponent : public ExportClass
     {
     public:
@@ -80,6 +82,7 @@ using tempint = TestFlamework::TempClass<int> ;
             std::cout << "FugaComponent destructor" << std::endl;
         }
     };
+    }
 }
 
 std::shared_ptr<TestFlamework::HogeComponent> ptr;
