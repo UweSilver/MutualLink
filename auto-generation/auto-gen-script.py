@@ -75,6 +75,8 @@ def get_exporter_code(classes):
         code += f"{full_namespace}_{class_name}** self\n"
         code += "){\n"
         # allocate memory
+        code += f"auto shared = std::make_shared<{class_name}>();\n"
+        code += f"*self"
         # add reference count
         code += "}\n\n"
 
